@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-import {useDispatch} from 'react-redux';
+import { useDispatch } from 'react-redux';
 
 import {Text, TextInput, Button, H1, H2, H3, View} from '../UI';
 import Root from '../components/Root';
