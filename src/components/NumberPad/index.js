@@ -112,12 +112,12 @@ const NumberPad = ({setForm, form, settings, error}) => {
         accessibilityLabel="Time">
         {prettyTime}
       </Text>
-      <View flexDirection="row" flex={1} mb={2}>
-        <Button bg="transparent" native onPress={del} mr={1}>
-          del
-        </Button>
+      <View flexDirection="row" justifyContent="space-between" flex={1} mb={2}>
         <Button bg="transparent" native onPress={reset}>
-          reset
+        reset
+        </Button>
+        <Button bg="transparent" native onPress={del}>
+          del
         </Button>
       </View>
       <View
