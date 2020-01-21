@@ -9,7 +9,9 @@ import {Navigation} from 'react-native-navigation';
 const TimersScreen = () => {
   UIManager.setLayoutAnimationEnabledExperimental &&
     UIManager.setLayoutAnimationEnabledExperimental(true);
-  const timers = useSelector(state => state);
+
+  const { timers } = useSelector(state => state);
+
   useEffect(() => {
     LayoutAnimation.spring();
 
@@ -67,7 +69,7 @@ const TimersScreen = () => {
       <H3 fontWeight="normal">These are your current timers</H3>
       {timers
         .map((timer, i) => timer)
-        .sort((a, b) => b > a)
+        .reverse()
         .map((timer, i) => (
           <Timer key={timer.id} timer={timer} />
         ))}
