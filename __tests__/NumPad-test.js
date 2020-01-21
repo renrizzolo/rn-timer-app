@@ -68,7 +68,7 @@ test('it allows changing of time units threshold', async () => {
     baseElement,
   } = render(
     <Root>
-      <NumberPad {...numberPadProps} settings={{length: 4}} />
+      <NumberPad {...numberPadProps} settings={{timerLength: 4}} />
     </Root>,
   );
   const btn1 = getByText('1');
@@ -76,11 +76,11 @@ test('it allows changing of time units threshold', async () => {
   const btn7 = getByText('7');
   const reset = getByText('reset');
 
+ // fireEvent.press(reset);
   fireEvent.press(btn1);
   fireEvent.press(btn3);
   fireEvent.press(btn3);
   fireEvent.press(btn7);
-  fireEvent.press(reset);
 
   // wait for appearance
   await wait(() => expect(getByLabelText('Time')).toBeTruthy());
