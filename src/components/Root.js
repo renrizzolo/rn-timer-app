@@ -4,12 +4,13 @@ import {ThemeProvider} from 'styled-components/native';
 import {View, Text, ScrollView} from '../UI';
 import theme from '../commons/theme';
 
-const Root = ({children, style, ...rest}) => (
+const Root = ({children, style, afterScrollView, ...rest}) => (
   <ThemeProvider theme={theme}>
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={[styles.scrollView, style]} {...rest}>
         {children}
       </ScrollView>
+      {afterScrollView && afterScrollView()}
     </SafeAreaView>
   </ThemeProvider>
 );
