@@ -95,7 +95,7 @@ const Timer = ({timer}) => {
         doTimeStuff()
         if (Date.now() >= endTime) {
           console.log('it has ended', id);
-          // setDone(true);
+          setDone(true);
           loopIn();
           dispatch(finish({id: timer.id}));
         }
@@ -157,7 +157,7 @@ const Timer = ({timer}) => {
       // style={{backgroundColor: loop, width: '100%'}}
       p={3}
       borderRadius={1}>
-      {!done && (
+      
         <Text
           as={Animated.Text}
           style={{opacity: fade}}
@@ -167,7 +167,7 @@ const Timer = ({timer}) => {
           lineHeight={6}>
           {remaining}
         </Text>
-      )}
+      
 
       <H2 mb={1}>{text}</H2>
 
