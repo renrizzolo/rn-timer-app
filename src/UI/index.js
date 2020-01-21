@@ -19,7 +19,6 @@ import {
 } from 'styled-system';
 
 
-// const types = variant
 const View = styled(N.View)(
   compose(
     space,
