@@ -6,12 +6,13 @@ import {remove, cancel, finish} from '../../redux/timers';
 import {Text, View, Button, H1, H2, H3} from '../../UI';
 import theme from '../../commons/theme';
 const ANIMATED_DURATION = 300;
+
 const Timer = ({timer}) => {
   const dispatch = useDispatch();
   const [done, setDone] = useState(false);
-  const [timerInterval, setTimerInterval] = useState();
   const [remaining, setRemaining] = useState('00:00:00');
   const [prettyLength, setPrettyLength] = useState();
+  const [prettyCancelledAt, setPrettyCancelledAt] = useState();
 
   const [elapsed, setElapsed] = useState(0);
 
@@ -66,7 +67,6 @@ const Timer = ({timer}) => {
     const endTime = new Date(timer.endTime);
     let timeDiff = now - startTime; //in ms
     const totalTime = endTime - startTime;
-    // strip the ms
 
     // get seconds
     const seconds = msToTimeString(Math.round(timeDiff));
@@ -79,11 +79,21 @@ const Timer = ({timer}) => {
     // don't display a negative
     // remaining time if already finished
     // (could also just check timer.finished)
-    if(s > 0) {
+    if (s > 0) {
       const remaining = msToTimeString(s);
       setRemaining(remaining);
     }
-  }
+    if (timer.cancelledAt) {
+      // make sure the remaining time comes
+      // from the cancelled time
+      console.log('cancelled at', timer.cancelledAt);
+      const cancelled = new Date(timer.cancelledAt);
+      const diff = endTime - cancelled;
+      const str = msToTimeString(diff);
+      setRemaining(str);
+
+    }
+  };
   useEffect(() => {
     console.log('setting useEffect interval on ', timer.id);
     let ti;
@@ -92,7 +102,7 @@ const Timer = ({timer}) => {
         console.log('zzz it runs');
         const endTime = new Date(timer.endTime);
 
-        doTimeStuff()
+        doTimeStuff();
         if (Date.now() >= endTime) {
           console.log('it has ended', id);
           setDone(true);
@@ -116,7 +126,6 @@ const Timer = ({timer}) => {
     dispatch(cancel({id}));
     // we also need to stop the timer running
     dispatch(finish({id}));
-
   };
   const removeTimer = () => {
     const {id} = timer;
@@ -131,12 +140,13 @@ const Timer = ({timer}) => {
     };
   }, [timer.finished]);
 
-  // calculate timer length etc.
-  // on mount in case timer already
-  // finished (thus no interval )
   useEffect(() => {
+    // calculate timer length etc.
+    // on mount in case timer already
+    // finished (thus no interval set)
     doTimeStuff();
-  }, [])
+  }, []);
+
   const loop = loopValue.interpolate({
     inputRange: [0, 1],
     outputRange: [theme.colors.secondary, theme.colors.primaryLight],
@@ -147,7 +157,15 @@ const Timer = ({timer}) => {
     outputRange: [1, 0],
     // extrapolate: 'clamp',
   });
-  const {id, text, startTime, endTime, timerLength, finished, cancelled} = timer;
+  const {
+    id,
+    text,
+    startTime,
+    endTime,
+    timerLength,
+    finished,
+    cancelled,
+  } = timer;
   return (
     <View
       as={Animated.View}
@@ -157,26 +175,26 @@ const Timer = ({timer}) => {
       // style={{backgroundColor: loop, width: '100%'}}
       p={3}
       borderRadius={1}>
-      
-        <Text
-          as={Animated.Text}
-          style={{opacity: fade}}
-          color={finished || cancelled ? 'text' : 'secondary'}
-          fontWeight="bold"
-          fontSize={6}
-          lineHeight={6}>
-          {remaining}
-        </Text>
-      
+      <Text
+        as={Animated.Text}
+        style={{opacity: fade}}
+        color={finished || cancelled ? 'text' : 'secondary'}
+        fontWeight="bold"
+        fontSize={6}
+        lineHeight={6}>
+        {prettyCancelledAt ? prettyCancelledAt : remaining}
+      </Text>
 
       <H2 mb={1}>{text}</H2>
 
       <H3 fontWeight="normal" mb={1}>
         {prettyLength} timer{' '}
-        </H3>
-          {finished && (
-            <Text fontSize={1}>started at {new Date(startTime).toLocaleTimeString()}</Text>
-          )}
+      </H3>
+      {finished && (
+        <Text fontSize={1}>
+          started at {new Date(startTime).toLocaleTimeString()}
+        </Text>
+      )}
       {/* <Text mb={0}>
           started: {new Date(startTime).toLocaleTimeString()} ends at:{' '}
           {new Date(endTime).toLocaleTimeString()}
@@ -240,6 +258,8 @@ const Timer = ({timer}) => {
   );
 };
 
-Timer.propTypes = {};
+Timer.propTypes = {
+  timer: PropTypes.object,
+};
 
 export default Timer;

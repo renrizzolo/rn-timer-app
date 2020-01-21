@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import {createSlice} from '@reduxjs/toolkit';
 
 const timerLengthInMs = arr => {
   const m = arr.reverse().reduce((acc, curr, i) => {
@@ -12,7 +12,6 @@ export const timersSlice = createSlice({
   initialState: [],
   reducers: {
     add: (state, action) => {
-
       const {id, text, description, timerLength, timeArray} = action.payload;
 
       const start = new Date();
@@ -23,8 +22,9 @@ export const timersSlice = createSlice({
       // createSlice uses Immer so we can use push / mutate the state in the reduce
       state.push({
         id:
-        // make a random-ish id with current time + random string
-          new Date().getTime().toString(36) + '-' +
+          // make a random-ish id with current time + random string
+          new Date().getTime().toString(36) +
+          '-' +
           Math.random()
             .toString(36)
             .substr(2, 6),
@@ -34,31 +34,25 @@ export const timersSlice = createSlice({
         startTime: start.toISOString(),
         endTime: endTime.toISOString(),
         cancelled: false,
+        cancelledAt: null,
         finished: false,
       });
     },
     // I want to distiguish between
-    // natuarally finished and cancelled eary
+    // natuarally finished and cancelled early
     finish: (state, action) => {
       console.log('finish', action.payload);
 
       const timer = state.filter(({id}) => id === action.payload.id)[0];
-      if (!timer) {
-        console.log('escaped coz no', timer);
-        
-        return;
-      }
 
       timer.finished = true;
     },
     cancel: (state, action) => {
       console.log('cancel', action.payload);
-
+      const now = new Date();
       const timer = state.filter(({id}) => id === action.payload.id)[0];
-      if (!timer) {
-        return;
-      }
       timer.cancelled = true;
+      timer.cancelledAt = now.toISOString()
     },
     remove: (state, action) => {
       console.log('remove', action.payload);
@@ -69,4 +63,4 @@ export const timersSlice = createSlice({
 });
 
 export const {add, finish, cancel, remove} = timersSlice.actions;
-export const { reducer } = timersSlice;
+export const {reducer} = timersSlice;
