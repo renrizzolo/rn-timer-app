@@ -5,7 +5,7 @@ import {useDispatch} from 'react-redux';
 import {remove, cancel, finish} from '../../redux/timers';
 import {Text, View, Button, H1, H2, H3} from '../../UI';
 import theme from '../../commons/theme';
-const ANIMATED_DURATION = 500;
+const ANIMATED_DURATION = 300;
 const Timer = ({timer}) => {
   const dispatch = useDispatch();
   const [done, setDone] = useState(false);
@@ -33,7 +33,7 @@ const Timer = ({timer}) => {
     Animated.timing(loopValue, {
       toValue: 1,
       duration: ANIMATED_DURATION,
-      easing: Easing.linear,
+      easing: Easing.ease,
     }).start(event => {
       if (event.finished) {
         // loop it
@@ -45,7 +45,7 @@ const Timer = ({timer}) => {
     Animated.timing(loopValue, {
       toValue: 0,
       duration: ANIMATED_DURATION,
-      easing: Easing.linear,
+      easing: Easing.ease,
     }).stop();
   };
   const loopOut = () => {
@@ -60,36 +60,42 @@ const Timer = ({timer}) => {
       }
     });
   };
+  const doTimeStuff = () => {
+    const now = new Date();
+    const startTime = new Date(timer.startTime);
+    const endTime = new Date(timer.endTime);
+    let timeDiff = now - startTime; //in ms
+    const totalTime = endTime - startTime;
+    // strip the ms
 
+    // get seconds
+    const seconds = msToTimeString(Math.round(timeDiff));
+
+    const totalTimeString = msToTimeString(totalTime);
+    setElapsed(seconds);
+    setPrettyLength(totalTimeString);
+
+    const s = Math.round(-(now - endTime));
+    // don't display a negative
+    // remaining time if already finished
+    // (could also just check timer.finished)
+    if(s > 0) {
+      const remaining = msToTimeString(s);
+      setRemaining(remaining);
+    }
+  }
   useEffect(() => {
     console.log('setting useEffect interval on ', timer.id);
     let ti;
     if (timer && timer.endTime && !timer.finished) {
       ti = setInterval(() => {
         console.log('zzz it runs');
-
-        const now = new Date();
-        const startTime = new Date(timer.startTime);
         const endTime = new Date(timer.endTime);
-        let timeDiff = now - startTime; //in ms
-        const totalTime = endTime - startTime;
-        // strip the ms
 
-        // get seconds
-        const seconds = msToTimeString(Math.round(timeDiff));
-        const s = Math.round(-(now - endTime));
-        const remaining = msToTimeString(s);
-        const totalTimeString = msToTimeString(totalTime);
-        setElapsed(seconds);
-        setRemaining(remaining);
-        setPrettyLength(totalTimeString);
-        console.log(seconds + ' seconds');
-        console.log('totalTime', totalTime);
-        console.log('endTime', endTime);
-        console.log('now', Date.now());
+        doTimeStuff()
         if (Date.now() >= endTime) {
           console.log('it has ended', id);
-          setDone(true);
+          // setDone(true);
           loopIn();
           dispatch(finish({id: timer.id}));
         }
@@ -102,11 +108,11 @@ const Timer = ({timer}) => {
 
       clearInterval(ti);
     };
-  }, [done, timer.finished]);
+  }, [timer.finished]);
   const cancelTimer = () => {
     const {id} = timer;
     console.log('cancel id', id);
-    setDone(true);
+    // setDone(true);
     dispatch(cancel({id}));
     // we also need to stop the timer running
     dispatch(finish({id}));
@@ -123,8 +129,14 @@ const Timer = ({timer}) => {
     return () => {
       stopLoop();
     };
-  }, [done, timer.finished]);
+  }, [timer.finished]);
 
+  // calculate timer length etc.
+  // on mount in case timer already
+  // finished (thus no interval )
+  useEffect(() => {
+    doTimeStuff();
+  }, [])
   const loop = loopValue.interpolate({
     inputRange: [0, 1],
     outputRange: [theme.colors.secondary, theme.colors.primaryLight],
@@ -145,19 +157,26 @@ const Timer = ({timer}) => {
       // style={{backgroundColor: loop, width: '100%'}}
       p={3}
       borderRadius={1}>
-      <Text
-        as={Animated.Text}
-        style={{opacity: fade}}
-        color={finished || cancelled ? 'text' : 'secondary'}
-        fontWeight="bold"
-        fontSize={6}
-        lineHeight={6}>
-        {remaining}
-      </Text>
+      {!done && (
+        <Text
+          as={Animated.Text}
+          style={{opacity: fade}}
+          color={finished || cancelled ? 'text' : 'secondary'}
+          fontWeight="bold"
+          fontSize={6}
+          lineHeight={6}>
+          {remaining}
+        </Text>
+      )}
 
-      <H2 mb={2}>{text}</H2>
+      <H2 mb={1}>{text}</H2>
 
-      <H3 fontWeight="normal">{prettyLength} timer</H3>
+      <H3 fontWeight="normal" mb={1}>
+        {prettyLength} timer{' '}
+        </H3>
+          {finished && (
+            <Text fontSize={1}>started at {new Date(startTime).toLocaleTimeString()}</Text>
+          )}
       {/* <Text mb={0}>
           started: {new Date(startTime).toLocaleTimeString()} ends at:{' '}
           {new Date(endTime).toLocaleTimeString()}
@@ -173,11 +192,12 @@ const Timer = ({timer}) => {
             mb={0}
             p={0}
             color="success"
-            bg="text"
+            bg="background"
             borderRadius={99}
             lineHeight={'28px'}
             width={32}
             height={32}
+            onPress={() => setDone(true)}
             textAlign="center">
             ✓
           </Text>
@@ -189,7 +209,6 @@ const Timer = ({timer}) => {
             bg="text"
             borderRadius={99}
             lineHeight={'28px'}
-         
             textAlign="center">
             cancelled
           </Text>
@@ -203,7 +222,6 @@ const Timer = ({timer}) => {
             justifyContent={'center'}
             textAlign={'center'}
             onPress={cancelTimer}>
-            {' '}
             Cancel
           </Button>
         )}
