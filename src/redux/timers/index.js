@@ -30,6 +30,7 @@ export const timersSlice = createSlice({
             .substr(2, 6),
         text,
         description,
+        timeArray,
         timerLength: tl,
         startTime: start.toISOString(),
         endTime: endTime.toISOString(),
