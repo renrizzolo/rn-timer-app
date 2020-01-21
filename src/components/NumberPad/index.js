@@ -8,12 +8,14 @@ const NumberPad = ({setForm, form, settings, error}) => {
   const initialTime = () => {
     let val = '';
     for (let i = 0; i < settings.timerLength; i++) {
+      console.log('calculating initialTime', i);
+      
       val += '0';
     }
     return val;
   };
 
-  const initTime = useMemo(initialTime, [initialTime]);
+  const initTime = useMemo(initialTime, [settings.timerLength]);
   const [time, setTime] = useState(initTime);
   const [count, setCount] = useState(0);
   const [timeArray, setTimeArray] = useState(['00', '00', '00']);
