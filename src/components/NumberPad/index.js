@@ -104,6 +104,8 @@ const NumberPad = ({setForm, form, settings, error}) => {
   return (
     <View>
       <Text
+      my={2}
+        textAlign="center"
         fontWeight="bold"
         fontFamily="monospace"
         fontSize={5}
