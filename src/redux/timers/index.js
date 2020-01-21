@@ -1,4 +1,4 @@
-import {configureStore, createSlice} from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit';
 
 const timerLengthInMs = arr => {
   const m = arr.reverse().reduce((acc, curr, i) => {
@@ -7,14 +7,12 @@ const timerLengthInMs = arr => {
   return m * 1000;
 };
 
-let nextTimer = 0;
-
 export const timersSlice = createSlice({
   name: 'timers',
   initialState: [],
   reducers: {
     add: (state, action) => {
-      
+
       const {id, text, description, timerLength, timeArray} = action.payload;
 
       const start = new Date();
@@ -24,7 +22,12 @@ export const timersSlice = createSlice({
 
       // createSlice uses Immer so we can use push / mutate the state in the reduce
       state.push({
-        id: nextTimer++,
+        id:
+        // make a random-ish id with current time + random string
+          new Date().getTime().toString(36) + '-' +
+          Math.random()
+            .toString(36)
+            .substr(2, 6),
         text,
         description,
         timerLength: tl,
@@ -37,10 +40,12 @@ export const timersSlice = createSlice({
     // I want to distiguish between
     // natuarally finished and cancelled eary
     finish: (state, action) => {
-      console.log('toggle', action.payload);
+      console.log('finish', action.payload);
 
       const timer = state.filter(({id}) => id === action.payload.id)[0];
       if (!timer) {
+        console.log('escaped coz no', timer);
+        
         return;
       }
 
@@ -64,7 +69,4 @@ export const timersSlice = createSlice({
 });
 
 export const {add, finish, cancel, remove} = timersSlice.actions;
-
-export const store = configureStore({
-  reducer: timersSlice.reducer,
-});
+export const { reducer } = timersSlice;
