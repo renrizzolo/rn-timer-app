@@ -27,8 +27,9 @@ const Timer = ({timer}) => {
     const mins = s % 60;
     const hrs = (s - mins) / 60;
 
-    return pad(hrs) + ':' + pad(mins) + ':' + pad(secs);
+    return pad(hrs) + ':' + pad(mins) + ':' + pad(secs) // + ':' + pad(ms);
   };
+
   let loopValue = new Animated.Value(0);
   const loopIn = () => {
     Animated.timing(loopValue, {
@@ -98,6 +99,10 @@ const Timer = ({timer}) => {
     console.log('setting useEffect interval on ', timer.id);
     let ti;
     if (timer && timer.endTime && !timer.finished) {
+      // not really sure how reliable it is
+      // having a lot of intervals running at once
+      // (change the interval duration to 1 and try adding a timer, it's
+      // pretty obvious how blocking this is to the UI)
       ti = setInterval(() => {
         console.log('zzz it runs');
         const endTime = new Date(timer.endTime);
@@ -132,7 +137,31 @@ const Timer = ({timer}) => {
     console.log('remove id', id);
     dispatch(remove({id}));
   };
-
+  // timeArray map function
+  const timeArrayToHMS = (t, i) => {
+    if ( t == '00') {
+      return;
+    }
+    // this doesn't convert
+    // 60 + seconds / minutes to 1 minute / hour
+    // (neither does the number pad though, 
+    // so it's consistent with that...)
+    let s = '';
+    switch (i) {
+      case 0:
+        s = 'h';
+        break;
+      case 1:
+        s = 'm';
+        break;
+      case 2:
+        s = 's';
+        break;
+      default:
+        break;
+    }
+    return `${t}${s}`;
+  };
   useEffect(() => {
     elapsed && loopIn();
     return () => {
@@ -163,6 +192,7 @@ const Timer = ({timer}) => {
     startTime,
     endTime,
     timerLength,
+    timeArray,
     finished,
     cancelled,
   } = timer;
@@ -180,21 +210,26 @@ const Timer = ({timer}) => {
         style={{opacity: fade}}
         color={finished || cancelled ? 'text' : 'secondary'}
         fontWeight="bold"
-        fontSize={6}
+        fontSize={finished ? 4 : 6}
         lineHeight={6}>
-        {prettyCancelledAt ? prettyCancelledAt : remaining}
+        {remaining}
       </Text>
 
-      <H2 mb={1}>{text}</H2>
+      <H2 mb={1} fontSize={finished ? 3 : undefined}>
+        {text}
+      </H2>
 
       <H3 fontWeight="normal" mb={1}>
-        {prettyLength} timer{' '}
+        {timeArray &&
+          [...timeArray].reverse().map(timeArrayToHMS)}{' '}
+        timer{' '}
+        {finished && (
+          <Text fontSize={1}>
+            started: {new Date(startTime).toLocaleTimeString()}
+          </Text>
+        )}
       </H3>
-      {finished && (
-        <Text fontSize={1}>
-          started at {new Date(startTime).toLocaleTimeString()}
-        </Text>
-      )}
+
       {/* <Text mb={0}>
           started: {new Date(startTime).toLocaleTimeString()} ends at:{' '}
           {new Date(endTime).toLocaleTimeString()}
