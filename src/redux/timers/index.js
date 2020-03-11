@@ -1,4 +1,5 @@
 import {createSlice} from '@reduxjs/toolkit';
+import {differenceInMilliseconds} from 'date-fns';
 
 const timerLengthInMs = arr => {
   const m = arr.reverse().reduce((acc, curr, i) => {
@@ -18,7 +19,7 @@ export const timersSlice = createSlice({
       const end = new Date();
       const tl = timerLengthInMs(timeArray);
       const endTime = new Date(end.getTime() + tl);
-
+      const totalMS = differenceInMilliseconds(new Date(), endTime);
       // createSlice uses Immer so we can use push / mutate the state in the reduce
       state.push({
         id:
@@ -31,9 +32,11 @@ export const timersSlice = createSlice({
         text,
         description,
         timeArray,
+        totalMS,
         timerLength: tl,
         startTime: start.toISOString(),
         endTime: endTime.toISOString(),
+        paused: false,
         cancelled: false,
         cancelledAt: null,
         finished: false,
@@ -53,7 +56,31 @@ export const timersSlice = createSlice({
       const now = new Date();
       const timer = state.filter(({id}) => id === action.payload.id)[0];
       timer.cancelled = true;
-      timer.cancelledAt = now.toISOString()
+      timer.cancelledAt = now.toISOString();
+    },
+    pause: (state, action) => {
+      console.log('pause', action.payload);
+      const now = new Date();
+      const timer = state.filter(({id}) => id === action.payload.id)[0];
+      timer.paused = true;
+      timer.pausedAt = now.toISOString();
+    },
+    resume: (state, action) => {
+      console.log('resume', action.payload);
+      const now = new Date();
+      const timer = state.filter(({id}) => id === action.payload.id)[0];
+      timer.paused = false;
+      timer.resumedAt = now.toISOString();
+      const end = timer.endTime;
+      // the time between pause and resume...
+      const diff = differenceInMilliseconds(
+        new Date(timer.resumedAt),
+        new Date(timer.pausedAt),
+      );
+        // ... plus the current end time = new end time
+      const newEndTime = new Date(new Date(end).getTime() + diff);
+      // update end time when resumed
+      timer.endTime = newEndTime.toISOString();
     },
     remove: (state, action) => {
       console.log('remove', action.payload);
@@ -63,5 +90,5 @@ export const timersSlice = createSlice({
   },
 });
 
-export const {add, finish, cancel, remove} = timersSlice.actions;
+export const {add, finish, pause, resume, cancel, remove} = timersSlice.actions;
 export const {reducer} = timersSlice;
