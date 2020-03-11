@@ -1,8 +1,17 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import {Animated, Easing} from 'react-native';
 import PropTypes from 'prop-types';
 import {useDispatch} from 'react-redux';
-import {remove, cancel, finish} from '../../redux/timers';
+import {
+  format,
+  formatDistance,
+  formatRelative,
+  subDays,
+  isPast,
+  isEqual,
+} from 'date-fns';
+import useInterval from '../../hooks/useInterval';
+import {remove, cancel, pause, resume, finish} from '../../redux/timers';
 import {Text, View, Button, H1, H2, H3} from '../../UI';
 import theme from '../../common/theme';
 const ANIMATED_DURATION = 300;
@@ -11,10 +20,10 @@ const Timer = ({timer}) => {
   const dispatch = useDispatch();
   const [done, setDone] = useState(false);
   const [remaining, setRemaining] = useState('00:00:00');
-  const [prettyLength, setPrettyLength] = useState();
-  const [prettyCancelledAt, setPrettyCancelledAt] = useState();
+  // const [prettyLength, setPrettyLength] = useState();
+  // const [prettyCancelledAt, setPrettyCancelledAt] = useState();
 
-  const [elapsed, setElapsed] = useState(0);
+  // const [elapsed, setElapsed] = useState(0);
 
   const pad = n => {
     return ('00' + n).slice(-2);
@@ -27,7 +36,7 @@ const Timer = ({timer}) => {
     const mins = s % 60;
     const hrs = (s - mins) / 60;
 
-    return pad(hrs) + ':' + pad(mins) + ':' + pad(secs) // + ':' + pad(ms);
+    return pad(hrs) + ':' + pad(mins) + ':' + pad(secs) + ':' + pad(ms);
   };
 
   let loopValue = new Animated.Value(0);
@@ -62,27 +71,46 @@ const Timer = ({timer}) => {
       }
     });
   };
-  const doTimeStuff = () => {
-    const now = new Date();
+  const getTimerTimes = useCallback(() => {
     const startTime = new Date(timer.startTime);
     const endTime = new Date(timer.endTime);
-    let timeDiff = now - startTime; //in ms
-    const totalTime = endTime - startTime;
+    return {startTime, endTime};
+  }, [timer.startTime, timer.endTime]);
+
+  const doTimeStuff = () => {
+    const now = new Date();
+    const {startTime, endTime} = getTimerTimes();
+    // let timeDiff = now - startTime; //in ms
+
+    // const totalTime = endTime - startTime;
+
+    if (isEqual(Date.now(), endTime) || isPast(endTime)) {
+      console.log('it has ended', id);
+      setDone(true);
+      loopIn();
+      dispatch(finish({id: timer.id}));
+    }
 
     // get seconds
-    const seconds = msToTimeString(Math.round(timeDiff));
+    // const seconds = msToTimeString(Math.round(timeDiff));
 
-    const totalTimeString = msToTimeString(totalTime);
-    setElapsed(seconds);
-    setPrettyLength(totalTimeString);
+    // setElapsed(seconds);
+    // const totalTimeString = msToTimeString(totalTime);
+    // setPrettyLength(totalTimeString);
 
     const s = Math.round(-(now - endTime));
     // don't display a negative
     // remaining time if already finished
     // (could also just check timer.finished)
+    let remaining;
     if (s > 0) {
-      const remaining = msToTimeString(s);
-      setRemaining(remaining);
+      remaining = msToTimeString(s);
+    }
+    if (timer.pausedAt && timer.paused) {
+      console.log('pausedAt', timer.pausedAt);
+      const paused = new Date(timer.pausedAt);
+      const diff = endTime - paused;
+      remaining = msToTimeString(diff);
     }
     if (timer.cancelledAt) {
       // make sure the remaining time comes
@@ -90,40 +118,50 @@ const Timer = ({timer}) => {
       console.log('cancelled at', timer.cancelledAt);
       const cancelled = new Date(timer.cancelledAt);
       const diff = endTime - cancelled;
-      const str = msToTimeString(diff);
-      setRemaining(str);
-
+      remaining = msToTimeString(diff);
     }
+      setRemaining(remaining);
+
   };
-  useEffect(() => {
-    console.log('setting useEffect interval on ', timer.id);
-    let ti;
-    if (timer && timer.endTime && !timer.finished) {
-      // not really sure how reliable it is
-      // having a lot of intervals running at once
-      // (change the interval duration to 1 and try adding a timer, it's
-      // pretty obvious how blocking this is to the UI)
-      ti = setInterval(() => {
-        console.log('zzz it runs');
-        const endTime = new Date(timer.endTime);
 
-        doTimeStuff();
-        if (Date.now() >= endTime) {
-          console.log('it has ended', id);
-          setDone(true);
-          loopIn();
-          dispatch(finish({id: timer.id}));
-        }
-      }, 1000);
-    }
-    console.log('interval id', ti);
+  // useEffect(() => {
+  //   console.log('setting useEffect interval on ', timer.id);
+  //   let ti;
+  //   if (timer && timer.endTime && !timer.finished) {
+  //     // not really sure how reliable it is
+  //     // having a lot of intervals running at once
+  //     // (change the interval duration to 1 and try adding a timer, it's
+  //     // pretty obvious how blocking this is to the UI)
+  //     ti = setInterval(() => {
+  //       console.log('zzz it runs');
+  //       const endTime = new Date(timer.endTime);
 
-    return () => {
-      console.log('clearing interval', ti);
+  //       doTimeStuff();
+  //       if (Date.now() >= endTime) {
+  //         console.log('it has ended', id);
+  //         setDone(true);
+  //         loopIn();
+  //         dispatch(finish({id: timer.id}));
+  //       }
+  //     }, 1000);
+  //   }
+  //   console.log('interval id', ti);
 
-      clearInterval(ti);
-    };
-  }, [timer.finished]);
+  //   return () => {
+  //     console.log('clearing interval', ti);
+
+  //     clearInterval(ti);
+  //   };
+  // }, [timer.finished]);
+
+  // the timer interval
+  useInterval(
+    () => {
+      doTimeStuff();
+    },
+    timer.finished || timer.paused ? null : 100,
+  );
+
   const cancelTimer = () => {
     const {id} = timer;
     console.log('cancel id', id);
@@ -132,6 +170,18 @@ const Timer = ({timer}) => {
     // we also need to stop the timer running
     dispatch(finish({id}));
   };
+
+  const pauseTimer = () => {
+    const {id} = timer;
+
+    dispatch(pause({id}));
+  };
+  const resumeTimer = () => {
+    const {id} = timer;
+
+    dispatch(resume({id}));
+  };
+
   const removeTimer = () => {
     const {id} = timer;
     console.log('remove id', id);
@@ -139,12 +189,12 @@ const Timer = ({timer}) => {
   };
   // timeArray map function
   const timeArrayToHMS = (t, i) => {
-    if ( t == '00') {
+    if (t == '00') {
       return;
     }
     // this doesn't convert
     // 60 + seconds / minutes to 1 minute / hour
-    // (neither does the number pad though, 
+    // (neither does the number pad though,
     // so it's consistent with that...)
     let s = '';
     switch (i) {
@@ -162,12 +212,13 @@ const Timer = ({timer}) => {
     }
     return `${t}${s}`;
   };
-  useEffect(() => {
-    elapsed && loopIn();
-    return () => {
-      stopLoop();
-    };
-  }, [timer.finished]);
+
+  // useEffect(() => {
+  //   timer.paused && loopIn();
+  //   return () => {
+  //     stopLoop();
+  //   };
+  // }, [timer.paused]);
 
   useEffect(() => {
     // calculate timer length etc.
@@ -207,7 +258,7 @@ const Timer = ({timer}) => {
       borderRadius={1}>
       <Text
         as={Animated.Text}
-        // style={{opacity: fade}}
+        style={{opacity: fade}}
         color={finished || cancelled ? 'text' : 'secondary'}
         fontWeight="bold"
         fontSize={finished ? 3 : 6}
@@ -225,7 +276,7 @@ const Timer = ({timer}) => {
           </Text>
           {finished && (
             <Text mb={1} fontSize={0}>
-              started: {new Date(startTime).toLocaleTimeString()}
+              started {formatRelative(new Date(startTime), new Date())}
             </Text>
           )}
         </View>
@@ -279,6 +330,16 @@ const Timer = ({timer}) => {
             Cancel
           </Button>
         )}
+        <Button
+          px={2}
+          py={1}
+          justiftySelf={'flex-end'}
+          alignItems={'center'}
+          justifyContent={'center'}
+          textAlign={'center'}
+          onPress={timer.paused ? resumeTimer : pauseTimer}>
+          {timer.paused ? 'Resume' : 'Pause'}
+        </Button>
         <Button
           px={2}
           py={1}
