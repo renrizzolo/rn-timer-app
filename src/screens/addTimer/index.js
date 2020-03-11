@@ -14,7 +14,7 @@ const AddTimerScreen = ({navigation}) => {
 
   const submit = () => {
     // if(error) return;
-    if (form.text && form.timeArray) {
+    if (form.timeArray) {
       const payload = {
         ...form,
       };
@@ -33,7 +33,7 @@ const AddTimerScreen = ({navigation}) => {
     navigation.goBack();
   };
   return (
-    <Root m={0} bg={'rgba(0,0,0,0.5)'}>
+    <Root m={0} bg={'background'}>
       <View
         m={2}
         borderRadius={2}
