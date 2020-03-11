@@ -135,7 +135,7 @@ const Home = ({navigation}) => {
         </View>
       )}>
       <H1>Timers</H1>
-      <H3 fontWeight="normal">These are your current timers</H3>
+      <H3 fontWeight="normal">These are your timers</H3>
       {[...timers]
         // sort by recently created
         .reverse()
