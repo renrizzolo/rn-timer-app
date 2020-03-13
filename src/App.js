@@ -25,8 +25,12 @@ const RootStack = createStackNavigator();
 function MainStackScreen() {
   return (
     <MainStack.Navigator>
-      <MainStack.Screen name="Home" component={Home} />
-      <MainStack.Screen name="Feed" component={Feed} />
+      <MainStack.Screen
+        name="Home"
+        component={Home}
+        options={{headerShown: false}}
+      />
+     {/*  <MainStack.Screen name="Feed" component={Feed} /> */}
     </MainStack.Navigator>
   );
 }
