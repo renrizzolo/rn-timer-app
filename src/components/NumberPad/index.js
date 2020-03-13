@@ -46,6 +46,7 @@ const NumberPad = ({setForm, form, settings, error}) => {
     update(t);
 
   };
+
   const del = () => {
     if (count === 0) {
       return;
@@ -82,26 +83,6 @@ const NumberPad = ({setForm, form, settings, error}) => {
       timeArray: splitArray,
     });
   };
-
-
-
-  const set = n => {
-    // if (form.timerLength && form.timerLength.length > 5) {
-    //   console.log('too long', form.timerLength);
-
-    //   return;
-    // }
-    setForm({
-      ...form,
-      timerLength: time,
-    });
-  };
-  // const del = () => {
-  //     setForm({
-  //       ...form,
-  //       timerLength: `${form.timerLength ? form.timerLength.slice(0, form.timerLength.length - 1) : ''}`,
-  //     });
-  // }
 
   return (
     <View>
