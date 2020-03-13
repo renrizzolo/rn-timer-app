@@ -9,14 +9,19 @@ import {
   subDays,
   isPast,
   isEqual,
+  differenceInSeconds,
 } from 'date-fns';
 import useInterval from '../../hooks/useInterval';
 import {remove, cancel, pause, resume, finish} from '../../redux/timers';
 import {Text, View, Button, H1, H2, H3} from '../../UI';
 import theme from '../../common/theme';
+import useTimer from '../../hooks/useTimer';
+import useIsMount from '../../hooks/useIsMount';
+
 const ANIMATED_DURATION = 300;
 
-const Timer = ({timer}) => {
+const Timer = ({timer, sound}) => {
+  const isMount = useIsMount();
   const dispatch = useDispatch();
   const [done, setDone] = useState(false);
   const [remaining, setRemaining] = useState('00:00:00');
@@ -24,7 +29,7 @@ const Timer = ({timer}) => {
   // const [prettyCancelledAt, setPrettyCancelledAt] = useState();
 
   // const [elapsed, setElapsed] = useState(0);
-
+  const {endRelative, lengthPretty} = useTimer(timer);
   const pad = n => {
     return ('00' + n).slice(-2);
   };
@@ -52,13 +57,7 @@ const Timer = ({timer}) => {
       }
     });
   };
-  const stopLoop = () => {
-    Animated.timing(loopValue, {
-      toValue: 0,
-      duration: ANIMATED_DURATION,
-      easing: Easing.ease,
-    }).stop();
-  };
+
   const loopOut = () => {
     Animated.timing(loopValue, {
       toValue: 0,
@@ -71,15 +70,19 @@ const Timer = ({timer}) => {
       }
     });
   };
-  const getTimerTimes = useCallback(() => {
-    const startTime = new Date(timer.startTime);
-    const endTime = new Date(timer.endTime);
-    return {startTime, endTime};
-  }, [timer.startTime, timer.endTime]);
+
+  const stopLoop = () => {
+    Animated.timing(loopValue, {
+      toValue: 0,
+      duration: ANIMATED_DURATION,
+      easing: Easing.ease,
+    }).stop();
+  };
 
   const doTimeStuff = () => {
+
     const now = new Date();
-    const {startTime, endTime} = getTimerTimes();
+    const endTime = new Date(timer.endTime);
     // let timeDiff = now - startTime; //in ms
 
     // const totalTime = endTime - startTime;
@@ -87,7 +90,6 @@ const Timer = ({timer}) => {
     if (isEqual(Date.now(), endTime) || isPast(endTime)) {
       console.log('it has ended', id);
       setDone(true);
-      loopIn();
       dispatch(finish({id: timer.id}));
     }
 
@@ -120,60 +122,43 @@ const Timer = ({timer}) => {
       const diff = endTime - cancelled;
       remaining = msToTimeString(diff);
     }
-      setRemaining(remaining);
-
+    setRemaining(remaining);
   };
-
-  // useEffect(() => {
-  //   console.log('setting useEffect interval on ', timer.id);
-  //   let ti;
-  //   if (timer && timer.endTime && !timer.finished) {
-  //     // not really sure how reliable it is
-  //     // having a lot of intervals running at once
-  //     // (change the interval duration to 1 and try adding a timer, it's
-  //     // pretty obvious how blocking this is to the UI)
-  //     ti = setInterval(() => {
-  //       console.log('zzz it runs');
-  //       const endTime = new Date(timer.endTime);
-
-  //       doTimeStuff();
-  //       if (Date.now() >= endTime) {
-  //         console.log('it has ended', id);
-  //         setDone(true);
-  //         loopIn();
-  //         dispatch(finish({id: timer.id}));
-  //       }
-  //     }, 1000);
-  //   }
-  //   console.log('interval id', ti);
-
-  //   return () => {
-  //     console.log('clearing interval', ti);
-
-  //     clearInterval(ti);
-  //   };
-  // }, [timer.finished]);
+  
 
   // the timer interval
   useInterval(
     () => {
       doTimeStuff();
     },
-    timer.finished || timer.paused ? null : 100,
+    timer.finished || timer.paused || timer.cancelled ? null : 100,
   );
+  useEffect(() => {
+    console.log('dd', differenceInSeconds(Date.now(), new Date(timer.endTime)));
+    
+    if (
+      !isMount &&
+      timer.finished &&
+      !timer.cancelled &&
+      differenceInSeconds(Date.now(), new Date(timer.endTime)) < 12 // play the sound only within 12 secs of finishing
+    ) {
+      setTimeout(() => {
+        sound.play();
+      }, 10);
+    }
+    return () => sound.stop();
+  }, [timer.finished]);
 
   const cancelTimer = () => {
     const {id} = timer;
     console.log('cancel id', id);
     // setDone(true);
     dispatch(cancel({id}));
-    // we also need to stop the timer running
-    dispatch(finish({id}));
+
   };
 
   const pauseTimer = () => {
     const {id} = timer;
-
     dispatch(pause({id}));
   };
   const resumeTimer = () => {
@@ -184,35 +169,11 @@ const Timer = ({timer}) => {
 
   const removeTimer = () => {
     const {id} = timer;
-    console.log('remove id', id);
+    // sound.stop();
     dispatch(remove({id}));
   };
-  // timeArray map function
-  const timeArrayToHMS = (t, i) => {
-    if (t == '00') {
-      return;
-    }
-    // this doesn't convert
-    // 60 + seconds / minutes to 1 minute / hour
-    // (neither does the number pad though,
-    // so it's consistent with that...)
-    let s = '';
-    switch (i) {
-      case 0:
-        s = 'h';
-        break;
-      case 1:
-        s = 'm';
-        break;
-      case 2:
-        s = 's';
-        break;
-      default:
-        break;
-    }
-    return `${t}${s}`;
-  };
 
+  // animation is buggy
   // useEffect(() => {
   //   timer.paused && loopIn();
   //   return () => {
@@ -227,39 +188,24 @@ const Timer = ({timer}) => {
     doTimeStuff();
   }, []);
 
-  const loop = loopValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [theme.colors.secondary, theme.colors.primaryLight],
-    //  extrapolate: 'clamp',
-  });
-  const fade = loopValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0],
-    // extrapolate: 'clamp',
-  });
-  const {
-    id,
-    text,
-    startTime,
-    endTime,
-    timerLength,
-    timeArray,
-    finished,
-    cancelled,
-  } = timer;
+  // const fade = loopValue.interpolate({
+  //   inputRange: [0, 1],
+  //   outputRange: [1, 0],
+  //   // extrapolate: 'clamp',
+  // });
+
+  const {id, text, timerLength, timeArray, finished, paused, cancelled} = timer;
   return (
     <View
-      as={Animated.View}
       width={1}
       mb={3}
       bg={'backgroundDark'}
-      // style={{backgroundColor: loop, width: '100%'}}
       p={3}
       borderRadius={1}>
       <Text
         as={Animated.Text}
-        style={{opacity: fade}}
-        color={finished || cancelled ? 'text' : 'secondary'}
+        // style={{opacity: fade}}
+        color={finished || cancelled || paused ? 'text' : 'secondary'}
         fontWeight="bold"
         fontSize={finished ? 3 : 6}
         lineHeight={finished ? 3 : 6}>
@@ -272,11 +218,11 @@ const Timer = ({timer}) => {
         </Text>
         <View>
           <Text fontSize={0} mb={1}>
-            {timeArray && [...timeArray].reverse().map(timeArrayToHMS)} timer{' '}
+            {lengthPretty && `${lengthPretty} timer`}
           </Text>
           {finished && (
             <Text mb={1} fontSize={0}>
-              started {formatRelative(new Date(startTime), new Date())}
+              finished {endRelative}
             </Text>
           )}
         </View>
@@ -322,6 +268,7 @@ const Timer = ({timer}) => {
             px={2}
             py={1}
             mr={1}
+            bg="warning"
             alignSelf={'flex-start'}
             alignItems={'center'}
             justifyContent={'center'}
@@ -330,16 +277,19 @@ const Timer = ({timer}) => {
             Cancel
           </Button>
         )}
-        <Button
-          px={2}
-          py={1}
-          justiftySelf={'flex-end'}
-          alignItems={'center'}
-          justifyContent={'center'}
-          textAlign={'center'}
-          onPress={timer.paused ? resumeTimer : pauseTimer}>
-          {timer.paused ? 'Resume' : 'Pause'}
-        </Button>
+        {!finished && !cancelled && (
+          <Button
+            bg={'tertiary'}
+            px={2}
+            py={1}
+            justiftySelf={'flex-end'}
+            alignItems={'center'}
+            justifyContent={'center'}
+            textAlign={'center'}
+            onPress={timer.paused ? resumeTimer : pauseTimer}>
+            {timer.paused ? 'Resume' : 'Pause'}
+          </Button>
+        )}
         <Button
           px={2}
           py={1}
