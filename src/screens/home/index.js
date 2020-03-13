@@ -4,6 +4,7 @@ import {useSelector} from 'react-redux';
 import Timer from '../../components/Timer';
 import {Text, View, Button, H1, H2, H3} from '../../UI';
 import Root from '../../components/Root';
+import useSound from '../../hooks/useSound';
 
 // how far button will translateY
 const HIDE_OFFSET = 125;
@@ -94,7 +95,8 @@ const Home = ({navigation}) => {
     outputRange: [HIDE_OFFSET, HIDE_OFFSET / 3, 0],
     extrapolate: 'clamp',
   });
-
+  const sound = useSound('analog_watch_alarm.mp3');
+  
   return (
     <Root
       bg={'background'}
@@ -144,7 +146,7 @@ const Home = ({navigation}) => {
           return a.finished - b.finished;
         })
         .map((timer, i) => (
-          <Timer key={timer.id} timer={timer} />
+          <Timer sound={sound} key={timer.id} timer={timer} />
         ))}
     </Root>
   );
